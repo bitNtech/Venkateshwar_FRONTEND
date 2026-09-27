@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react'
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react'
 import { DonutChartCard, type DonutSegment } from '../components/DonutChartCard'
 import { Dropdown } from '../components/Dropdown'
 import { downloadCsv } from '../lib/exportCsv'
@@ -540,6 +540,39 @@ export function Dashboard({
   const [activeCallModal, setActiveCallModal] = useState<ScatterPoint | null>(null)
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const [audioSpeed, setAudioSpeed] = useState<number>(1)
+  const inspectorRef = useRef<HTMLDivElement>(null)
+  const [isMobileScreen, setIsMobileScreen] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobileScreen(window.innerWidth < 640)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
+    if (!activeCallModal) return
+    const handlePointerDown = (e: MouseEvent) => {
+      if (inspectorRef.current && !inspectorRef.current.contains(e.target as Node)) {
+        const target = e.target as HTMLElement
+        if (target.closest('[data-scatter-point]')) return
+        setActiveCallModal(null)
+        setIsPlayingAudio(false)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveCallModal(null)
+        setIsPlayingAudio(false)
+      }
+    }
+    window.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [activeCallModal])
 
   const [hoveredBin, setHoveredBin] = useState<(typeof BASE_HISTOGRAM_BINS)[0] | null>(null)
   const [selectedBin, setSelectedBin] = useState<(typeof BASE_HISTOGRAM_BINS)[0] | null>(null)
@@ -1368,131 +1401,376 @@ export function Dashboard({
           </div>
 
           {/* Scatter Chart Canvas Area */}
-          <div className="relative mt-4 flex-1 min-h-[300px] border-b border-l border-slate-300 pb-6 pl-10 pr-4 pt-4 overflow-visible">
-            {/* Y-Axis Label */}
-            <span className="absolute -left-7 top-1/2 -rotate-90 text-[10px] font-mono uppercase tracking-wider text-muted">
-              Confidence %
-            </span>
-
-            {/* Y-Axis Ticks */}
-            {[100, 80, 60, 40].map((tick) => (
-              <div
-                key={tick}
-                className="absolute left-0 right-0 border-t border-slate-100 flex items-center"
-                style={{ top: `${((100 - tick) / 60) * 85 + 5}%` }}
-              >
-                <span className="absolute -left-8 text-[10px] font-mono text-faint">
-                  {tick}%
-                </span>
+          <div className="relative mt-5 flex-1 min-h-[320px] pt-3 pb-12 pl-16 pr-6 overflow-visible select-none">
+            {/* Plot Area Frame */}
+            <div className="relative w-full h-[260px] border-b border-l border-slate-300">
+              {/* Y-Axis Label (Placed clearly to the left with ample breathing room, no collision with tick numbers) */}
+              <div className="absolute -left-14 top-1/2 -translate-y-1/2 -rotate-90 text-[10px] font-mono uppercase tracking-wider text-muted font-medium whitespace-nowrap pointer-events-none select-none">
+                Confidence %
               </div>
-            ))}
 
-            {/* Quadrant Separation Guidelines */}
-            <div
-              className="absolute left-0 right-0 border-t border-dashed border-slate-300/80 pointer-events-none"
-              style={{ top: `${((100 - 75) / 60) * 85 + 5}%` }}
-            >
-              <span className="absolute right-2 -top-4 text-[9px] font-mono uppercase tracking-wider text-slate-400">
-                75% Target Confidence Floor
-              </span>
-            </div>
-            <div
-              className="absolute top-0 bottom-6 border-l border-dashed border-slate-300/80 pointer-events-none"
-              style={{ left: `${(90 / 240) * 100}%` }}
-            >
-              <span className="absolute -left-2 top-2 -rotate-90 text-[9px] font-mono uppercase tracking-wider text-slate-400">
-                90s AHT Benchmark
-              </span>
-            </div>
-
-            {/* Scatter Points */}
-            <div className="relative w-full h-[270px]">
-              {filteredScatter.map((pt) => {
-                const xPct = Math.min(96, Math.max(4, (pt.durationSec / 240) * 100))
-                const yPct = Math.min(94, Math.max(6, ((100 - pt.confidence) / 60) * 100))
-                const isHovered = hoveredPoint?.id === pt.id
-                const isSelected = activeCallModal?.id === pt.id
-
-                let color = 'bg-sage border-emerald-600'
-                if (pt.outcome === 'redirected') color = 'bg-pulse border-blue-600'
-                if (pt.outcome === 'voicemail') color = 'bg-amber border-amber-600'
-                if (pt.outcome === 'triage') color = 'bg-critical border-rose-600'
-
-                const isScatterTop = yPct < 28
-                const isScatterLeft = xPct < 22
-                const isScatterRight = xPct > 78
-                const scatterVAlign = isScatterTop ? 'top-full mt-2' : 'bottom-full mb-2'
-                const scatterHAlign = isScatterLeft
-                  ? 'left-0 translate-x-0'
-                  : isScatterRight
-                    ? 'right-0 left-auto translate-x-0'
-                    : 'left-1/2 -translate-x-1/2'
-
+              {/* Y-Axis Ticks & Grid Lines */}
+              {[100, 80, 60, 40].map((tick) => {
+                const topPct = ((100 - tick) / 60) * 100
                 return (
                   <div
-                    key={pt.id}
-                    onMouseEnter={() => setHoveredPoint(pt)}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                    onClick={() => {
-                      setActiveCallModal(pt)
-                      setIsPlayingAudio(false)
-                    }}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Call ${pt.caller}: ${pt.intent}, ${pt.confidence}% confidence, ${pt.durationSec}s`}
-                    className={`absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 cursor-pointer transition-all duration-150 ${color} ${
-                      isSelected
-                        ? 'scale-175 z-40 shadow-lg ring-4 ring-pulse'
-                        : isHovered
-                          ? 'scale-175 z-40 shadow-md ring-4 ring-pulse/35'
-                          : 'hover:scale-130 z-10'
-                    }`}
-                    style={{ left: `${xPct}%`, top: `${yPct}%` }}
+                    key={tick}
+                    className="absolute left-0 right-0 border-t border-slate-100 pointer-events-none"
+                    style={{ top: `${topPct}%` }}
                   >
-                    {/* Tooltip with Anti-Clipping Logic */}
-                    {isHovered && (
-                      <div
-                        className={`pointer-events-none absolute ${scatterVAlign} ${scatterHAlign} z-50 whitespace-nowrap rounded-xl border border-hairline/60 bg-ink-teal/95 px-3 py-2 text-xs text-mist shadow-2xl backdrop-blur-md animate-in fade-in-0 zoom-in-95`}
-                        style={{ minWidth: '180px' }}
-                      >
-                        <div className="flex items-center justify-between gap-3 font-semibold text-white">
-                          <span>{pt.caller} ({pt.callerName})</span>
-                          <span className="rounded bg-white/20 px-1.5 py-0.2 text-[10px] uppercase font-mono">
-                            {pt.outcome}
-                          </span>
-                        </div>
-                        <p className="mt-1 font-medium text-body-light text-slate-200">
-                          {pt.intent}
-                        </p>
-                        <div className="mt-1.5 flex items-center justify-between gap-3 font-mono text-[10px] text-mist/80 border-t border-white/10 pt-1">
-                          <span>Duration: <strong>{pt.durationSec}s</strong></span>
-                          <span>Confidence: <strong>{pt.confidence}%</strong></span>
-                          <span>Dept: {pt.department}</span>
-                        </div>
-                        <div className="mt-1 text-[9px] text-cyan font-semibold text-right">
-                          Click to play audio & inspect →
-                        </div>
-                      </div>
-                    )}
+                    {/* Tick label neatly right-aligned to the left of the axis line */}
+                    <span className="absolute -left-10 w-8 text-right text-[10px] font-mono font-medium text-faint -translate-y-1/2 select-none">
+                      {tick}%
+                    </span>
+                    {/* Tick mark extending left */}
+                    <span className="absolute -left-1.5 w-1.5 border-t border-slate-300 -translate-y-1/2" />
                   </div>
                 )
               })}
-            </div>
 
-            {/* X-Axis Ticks & Label */}
-            <div className="absolute -bottom-1 left-0 right-0 flex justify-between text-[10px] font-mono text-faint">
-              <span>0s</span>
-              <span>60s</span>
-              <span>120s (2m)</span>
-              <span>180s (3m)</span>
-              <span>240s+ (4m)</span>
+              {/* Quadrant Separation Guidelines */}
+              {/* 75% Target Confidence Floor */}
+              <div
+                className="absolute left-0 right-0 border-t border-dashed border-slate-300/80 pointer-events-none z-0"
+                style={{ top: `${((100 - 75) / 60) * 100}%` }}
+              >
+                <span className="absolute right-2 -top-4 text-[9px] font-mono uppercase tracking-wider text-slate-400 bg-surface/90 px-1 rounded select-none">
+                  75% Target Confidence Floor
+                </span>
+              </div>
+
+              {/* 90s AHT Benchmark */}
+              <div
+                className="absolute top-0 bottom-0 border-l border-dashed border-slate-300/80 pointer-events-none z-0"
+                style={{ left: `${(90 / 240) * 100}%` }}
+              >
+                <span className="absolute top-28 left-2 -rotate-90 origin-bottom-left text-[9px] font-mono uppercase tracking-wider text-slate-400 select-none whitespace-nowrap">
+                  90s AHT Benchmark
+                </span>
+              </div>
+
+              {/* Scatter Points (Rendered in identical coordinate space) */}
+              <div className="absolute inset-0 overflow-visible">
+                {filteredScatter.map((pt) => {
+                  const xPct = Math.min(100, Math.max(0, (pt.durationSec / 240) * 100))
+                  const yPct = Math.min(100, Math.max(0, ((100 - pt.confidence) / 60) * 100))
+                  const isHovered = hoveredPoint?.id === pt.id
+                  const isSelected = activeCallModal?.id === pt.id
+
+                  let color = 'bg-sage border-emerald-600'
+                  if (pt.outcome === 'redirected') color = 'bg-pulse border-blue-600'
+                  if (pt.outcome === 'voicemail') color = 'bg-amber border-amber-600'
+                  if (pt.outcome === 'triage') color = 'bg-critical border-rose-600'
+
+                  const isScatterTop = yPct < 28
+                  const isScatterLeft = xPct < 22
+                  const isScatterRight = xPct > 78
+                  const scatterVAlign = isScatterTop ? 'top-full mt-2' : 'bottom-full mb-2'
+                  const scatterHAlign = isScatterLeft
+                    ? 'left-0 translate-x-0'
+                    : isScatterRight
+                      ? 'right-0 left-auto translate-x-0'
+                      : 'left-1/2 -translate-x-1/2'
+
+                  return (
+                    <div
+                      key={pt.id}
+                      onMouseEnter={() => setHoveredPoint(pt)}
+                      onMouseLeave={() => setHoveredPoint(null)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setActiveCallModal((prev) => (prev?.id === pt.id ? null : pt))
+                        setIsPlayingAudio(false)
+                      }}
+                      data-scatter-point="true"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Call ${pt.caller}: ${pt.intent}, ${pt.confidence}% confidence, ${pt.durationSec}s`}
+                      className={`absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 cursor-pointer transition-all duration-150 ${color} ${
+                        isSelected
+                          ? 'scale-175 z-40 shadow-lg ring-4 ring-pulse ring-offset-2'
+                          : isHovered
+                            ? 'scale-175 z-40 shadow-md ring-4 ring-pulse/35'
+                            : 'hover:scale-130 z-10'
+                      }`}
+                      style={{ left: `${xPct}%`, top: `${yPct}%` }}
+                    >
+                      {/* Tooltip with Anti-Clipping Logic (Only shown when not selected) */}
+                      {isHovered && !isSelected && (
+                        <div
+                          className={`pointer-events-none absolute ${scatterVAlign} ${scatterHAlign} z-50 whitespace-nowrap rounded-xl border border-hairline/60 bg-ink-teal/95 px-3 py-2 text-xs text-mist shadow-2xl backdrop-blur-md animate-in fade-in-0 zoom-in-95`}
+                          style={{ minWidth: '180px' }}
+                        >
+                          <div className="flex items-center justify-between gap-3 font-semibold text-white">
+                            <span>{pt.caller} ({pt.callerName})</span>
+                            <span className="rounded bg-white/20 px-1.5 py-0.2 text-[10px] uppercase font-mono">
+                              {pt.outcome}
+                            </span>
+                          </div>
+                          <p className="mt-1 font-medium text-body-light text-slate-200">
+                            {pt.intent}
+                          </p>
+                          <div className="mt-1.5 flex items-center justify-between gap-3 font-mono text-[10px] text-mist/80 border-t border-white/10 pt-1">
+                            <span>Duration: <strong>{pt.durationSec}s</strong></span>
+                            <span>Confidence: <strong>{pt.confidence}%</strong></span>
+                            <span>Dept: {pt.department}</span>
+                          </div>
+                          <div className="mt-1 text-[9px] text-cyan font-semibold text-right">
+                            Click to play audio & inspect →
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Active Call Inspector Popover (Rendered directly where user clicks) */}
+                {activeCallModal && (() => {
+                  const modalXPct = Math.min(100, Math.max(0, (activeCallModal.durationSec / 240) * 100))
+                  const modalYPct = Math.min(100, Math.max(0, ((100 - activeCallModal.confidence) / 60) * 100))
+                  const isRightSide = modalXPct > 50
+                  const isBottomSide = modalYPct > 45
+
+                  return (
+                    <div
+                      ref={inspectorRef}
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label={`Call audio and transcript for ${activeCallModal.caller}`}
+                      className={`z-50 rounded-2xl border border-hairline bg-surface/98 p-4 shadow-2xl backdrop-blur-md animate-in fade-in-0 zoom-in-95 ${
+                        isMobileScreen
+                          ? 'fixed inset-x-3 top-20 max-w-sm mx-auto'
+                          : 'absolute w-[360px] sm:w-[410px] max-w-[calc(100%-16px)]'
+                      }`}
+                      style={
+                        !isMobileScreen
+                          ? {
+                              ...(isRightSide
+                                ? { right: `calc(${100 - modalXPct}% + 14px)`, left: 'auto' }
+                                : { left: `calc(${modalXPct}% + 14px)`, right: 'auto' }),
+                              ...(isBottomSide
+                                ? { bottom: '-8px', top: 'auto' }
+                                : { top: '-8px', bottom: 'auto' }),
+                            }
+                          : undefined
+                      }
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between border-b border-hairline pb-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-pulse/10 text-pulse font-bold text-xs">
+                            <PhoneIcon className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-display text-sm font-bold text-body">
+                                Call {activeCallModal.caller}
+                              </h3>
+                              <span className="rounded-full bg-canvas px-2 py-0.5 text-[11px] font-medium text-muted">
+                                {activeCallModal.callerName}
+                              </span>
+                              <span
+                                className={`rounded-full px-1.5 py-0.2 text-[9px] font-bold uppercase ${
+                                  activeCallModal.outcome === 'resolved'
+                                    ? 'bg-sage/15 text-sage'
+                                    : activeCallModal.outcome === 'triage'
+                                      ? 'bg-critical/15 text-critical'
+                                      : 'bg-pulse/15 text-pulse'
+                                }`}
+                              >
+                                {activeCallModal.outcome}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[11px] text-muted">
+                              {activeCallModal.department} · {activeCallModal.durationSec}s · {activeCallModal.confidence}% AI Confidence
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCallModal(null)
+                            setIsPlayingAudio(false)
+                          }}
+                          className="rounded-lg p-1 text-muted hover:bg-surface-hover hover:text-body transition-colors"
+                          aria-label="Close Call Details"
+                        >
+                          <CloseIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* Simulated Audio Player */}
+                      <div className="mt-3 rounded-xl border border-hairline bg-ink-teal p-3 text-white">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => setIsPlayingAudio((prev) => !prev)}
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-pulse text-white shadow-md hover:scale-105 transition-transform"
+                              aria-label={isPlayingAudio ? 'Pause Audio' : 'Play Audio'}
+                            >
+                              {isPlayingAudio ? (
+                                <span className="font-bold text-xs">❚❚</span>
+                              ) : (
+                                <span className="font-bold text-xs ml-0.5">▶</span>
+                              )}
+                            </button>
+                            <div>
+                              <span className="text-xs font-semibold text-white">
+                                {isPlayingAudio ? 'Playing Telephony Audio' : 'Call Audio Recording'}
+                              </span>
+                              <p className="text-[10px] text-mist/70 font-mono">
+                                PBX · G.711u Stereo
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAudioSpeed((s) => (s === 1 ? 1.5 : s === 1.5 ? 2 : 1))}
+                              className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white hover:bg-white/20 transition-colors"
+                            >
+                              {audioSpeed}x Speed
+                            </button>
+                            <span className="font-mono text-xs text-cyan">
+                              0:{isPlayingAudio ? '18' : '00'} / 0:{activeCallModal.durationSec}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Animated Waveform Simulation */}
+                        <div className="mt-2.5 flex items-center gap-0.5 h-5 px-0.5">
+                          {[15, 28, 45, 75, 90, 60, 44, 28, 80, 95, 62, 38, 55, 78, 92, 48, 22, 60, 85, 40, 20].map(
+                            (val, idx) => (
+                              <div
+                                key={idx}
+                                className={`flex-1 rounded-full transition-all duration-300 ${
+                                  isPlayingAudio && idx < 10
+                                    ? 'bg-cyan animate-pulse'
+                                    : 'bg-white/25'
+                                }`}
+                                style={{ height: `${val}%` }}
+                              />
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Conversation Dialogue Snippet */}
+                      <div className="mt-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted font-mono">
+                          Speech-to-Text Clinical Dialogue
+                        </span>
+                        <div className="mt-1.5 max-h-32 overflow-y-auto space-y-2 rounded-xl border border-hairline bg-canvas p-2.5">
+                          {activeCallModal.transcriptSnippet.map((turn, tIdx) => (
+                            <div
+                              key={tIdx}
+                              className={`flex flex-col text-xs ${
+                                turn.speaker === 'AICA' ? 'items-end' : 'items-start'
+                              }`}
+                            >
+                              <span className="text-[9px] font-mono text-faint mb-0.5">
+                                {turn.speaker}
+                              </span>
+                              <div
+                                className={`max-w-[88%] rounded-xl px-2.5 py-1.5 text-xs ${
+                                  turn.speaker === 'AICA'
+                                    ? 'bg-pulse text-white rounded-br-none'
+                                    : 'bg-surface border border-hairline text-body rounded-bl-none shadow-2xs'
+                                }`}
+                              >
+                                {turn.text}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Action Taken & EHR Integration note */}
+                      <div className="mt-2.5 rounded-xl border border-hairline bg-surface-hover/70 p-2 text-xs">
+                        <span className="font-semibold text-body text-[11px]">HIS Action Recorded:</span>
+                        <p className="mt-0.5 text-muted font-mono text-[10px] leading-relaxed">
+                          {activeCallModal.ehrAction}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-3 flex items-center justify-between border-t border-hairline pt-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCallModal(null)
+                            setIsPlayingAudio(false)
+                          }}
+                          className="btn-secondary !py-1 !px-2.5 text-xs"
+                        >
+                          Close
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const caller = activeCallModal.caller
+                            setActiveCallModal(null)
+                            setIsPlayingAudio(false)
+                            onNavigate('handled-calls', { search: caller })
+                          }}
+                          className="btn-primary !py-1 !px-3 text-xs flex items-center gap-1.5"
+                        >
+                          Open in Handled Calls
+                          <ChevronRightIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* X-Axis Ticks & Labels */}
+              {[
+                { val: 0, label: '0s', pct: 0 },
+                { val: 60, label: '60s', pct: 25 },
+                { val: 120, label: '120s (2m)', pct: 50 },
+                { val: 180, label: '180s (3m)', pct: 75 },
+                { val: 240, label: '240s+ (4m)', pct: 100 },
+              ].map((tick, idx) => (
+                <div
+                  key={tick.val}
+                  className="absolute top-full flex flex-col pointer-events-none select-none"
+                  style={{
+                    left: `${tick.pct}%`,
+                    transform:
+                      idx === 0
+                        ? 'translateX(0)'
+                        : idx === 4
+                          ? 'translateX(-100%)'
+                          : 'translateX(-50%)',
+                    alignItems:
+                      idx === 0
+                        ? 'flex-start'
+                        : idx === 4
+                          ? 'flex-end'
+                          : 'center',
+                  }}
+                >
+                  {/* Tick mark line below axis */}
+                  <div className="h-1.5 w-px bg-slate-300" />
+                  {/* Tick label text safely below the line */}
+                  <span className="mt-1 text-[10px] font-mono text-faint whitespace-nowrap">
+                    {tick.label}
+                  </span>
+                </div>
+              ))}
+
+              {/* X-Axis Title */}
+              <div className="absolute top-[calc(100%+28px)] left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-wider text-muted font-medium whitespace-nowrap pointer-events-none select-none">
+                Call Duration (Seconds)
+              </div>
             </div>
-            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-wider text-muted">
-              Call Duration (Seconds)
-            </span>
           </div>
 
-          <div className="mt-8 pt-3 border-t border-hairline flex flex-wrap items-center justify-between text-xs text-muted">
+          <div className="mt-4 pt-3 border-t border-hairline flex flex-wrap items-center justify-between text-xs text-muted">
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-sage" /> Automated (~86%)
               <span className="h-2 w-2 rounded-full bg-pulse ml-2" /> Staff Handoff (~11%)
@@ -1768,175 +2046,7 @@ export function Dashboard({
       </div>
 
 
-      {/* Interactive Call Inspector Modal (Triggered by clicking Scatter Points) */}
-      {activeCallModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in-50">
-          <div
-            className="w-full max-w-xl rounded-2xl border border-hairline bg-surface p-6 shadow-2xl animate-in zoom-in-95"
-            role="dialog"
-            aria-modal="true"
-          >
-            {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-hairline pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pulse/10 text-pulse font-bold text-sm">
-                  <PhoneIcon className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-display text-base font-bold text-body">
-                      Call {activeCallModal.caller}
-                    </h3>
-                    <span className="rounded-full bg-canvas px-2 py-0.5 text-xs font-medium text-muted">
-                      {activeCallModal.callerName}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                        activeCallModal.outcome === 'resolved'
-                          ? 'bg-sage/15 text-sage'
-                          : activeCallModal.outcome === 'triage'
-                            ? 'bg-critical/15 text-critical'
-                            : 'bg-pulse/15 text-pulse'
-                      }`}
-                    >
-                      {activeCallModal.outcome}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted">
-                    {activeCallModal.department} Department · {activeCallModal.durationSec}s duration · {activeCallModal.confidence}% AI Confidence
-                  </p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => setActiveCallModal(null)}
-                className="rounded-lg p-1 text-muted hover:bg-surface-hover hover:text-body"
-              >
-                <CloseIcon className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Simulated Audio Player */}
-            <div className="mt-4 rounded-xl border border-hairline bg-ink-teal p-3.5 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsPlayingAudio((prev) => !prev)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-pulse text-white shadow-md hover:scale-105 transition-transform"
-                  >
-                    {isPlayingAudio ? (
-                      <span className="font-bold text-xs">❚❚</span>
-                    ) : (
-                      <span className="font-bold text-xs ml-0.5">▶</span>
-                    )}
-                  </button>
-                  <div>
-                    <span className="text-xs font-semibold text-white">
-                      {isPlayingAudio ? 'Playing Telephony Audio Recording' : 'Call Audio Recording'}
-                    </span>
-                    <p className="text-[10px] text-mist/70 font-mono">
-                      Venkateshwar Cloud PBX · G.711u Stereo
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setAudioSpeed((s) => (s === 1 ? 1.5 : s === 1.5 ? 2 : 1))}
-                    className="rounded bg-white/10 px-2 py-0.5 font-mono text-[10px] font-bold text-white hover:bg-white/20"
-                  >
-                    {audioSpeed}x Speed
-                  </button>
-                  <span className="font-mono text-xs text-cyan">
-                    0:{isPlayingAudio ? '18' : '00'} / 0:{activeCallModal.durationSec}
-                  </span>
-                </div>
-              </div>
-
-              {/* Animated Waveform Simulation */}
-              <div className="mt-3 flex items-center gap-1 h-7 px-1">
-                {[12, 28, 42, 75, 90, 60, 44, 28, 80, 95, 62, 38, 55, 78, 92, 48, 22, 60, 85, 40, 20].map(
-                  (val, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex-1 rounded-full transition-all duration-300 ${
-                        isPlayingAudio && idx < 10
-                          ? 'bg-cyan animate-pulse'
-                          : 'bg-white/25'
-                      }`}
-                      style={{ height: `${val}%` }}
-                    />
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* Conversation Dialogue Snippet */}
-            <div className="mt-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted">
-                Speech-to-Text Clinical Dialogue
-              </span>
-              <div className="mt-2 max-h-48 overflow-y-auto space-y-2 rounded-xl border border-hairline bg-canvas p-3">
-                {activeCallModal.transcriptSnippet.map((turn, tIdx) => (
-                  <div
-                    key={tIdx}
-                    className={`flex flex-col text-xs ${
-                      turn.speaker === 'AICA' ? 'items-end' : 'items-start'
-                    }`}
-                  >
-                    <span className="text-[10px] font-mono text-faint mb-0.5">
-                      {turn.speaker}
-                    </span>
-                    <div
-                      className={`max-w-[85%] rounded-xl px-3 py-1.5 ${
-                        turn.speaker === 'AICA'
-                          ? 'bg-pulse text-white rounded-br-none'
-                          : 'bg-surface border border-hairline text-body rounded-bl-none'
-                      }`}
-                    >
-                      {turn.text}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action Taken & EHR Integration note */}
-            <div className="mt-3 rounded-xl border border-hairline bg-surface-hover/70 p-3 text-xs">
-              <span className="font-semibold text-body">HIS Action Recorded:</span>
-              <p className="mt-0.5 text-muted font-mono text-[11px]">
-                {activeCallModal.ehrAction}
-              </p>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="mt-5 flex items-center justify-between border-t border-hairline pt-3">
-              <button
-                type="button"
-                onClick={() => setActiveCallModal(null)}
-                className="btn-secondary !py-1.5 !px-3 text-xs"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const caller = activeCallModal.caller
-                  setActiveCallModal(null)
-                  onNavigate('handled-calls', { search: caller })
-                }}
-                className="btn-primary !py-1.5 !px-4 text-xs flex items-center gap-1.5"
-              >
-                Open in Handled Calls
-                <ChevronRightIcon className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

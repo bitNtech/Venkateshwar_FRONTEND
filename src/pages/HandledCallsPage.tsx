@@ -10,10 +10,6 @@ import {
   SearchIcon,
   VoiceRecordingIcon,
   AlertTriangleIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
 } from '../components/icons'
 import { Dropdown } from '../components/Dropdown'
 import { downloadCsv } from '../lib/exportCsv'
@@ -1278,16 +1274,16 @@ export function HandledCallsPage({
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 border-b border-hairline text-xs">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span className="font-semibold text-slate-800">Sheet: Clinical_Telephony_Master_Ledger.xlsx</span>
+            <span className="font-semibold text-slate-800">Clinical_Telephony_Master_Ledger.xlsx</span>
             <span className="text-slate-400">·</span>
             <span className="text-slate-600 font-mono text-[11px]">
-              Showing {filteredCalls.length === 0 ? 0 : startIndex + 1}–{endIndex} of {filteredCalls.length} records (10 per sheet)
+              Showing {filteredCalls.length === 0 ? 0 : startIndex + 1}–{endIndex} of {filteredCalls.length} records (10 per range)
             </span>
           </div>
 
-          {/* Quick Sheet Switcher: Sheet 1, Sheet 2, Sheet 3 */}
+          {/* Quick range switcher */}
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Change Sheet:</span>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Rows:</span>
             <div className="inline-flex rounded-lg bg-slate-200/90 p-0.5 border border-slate-300 shadow-2xs">
               {Array.from({ length: totalSheets }, (_, i) => i + 1).map((sNum) => (
                 <button
@@ -1300,7 +1296,7 @@ export function HandledCallsPage({
                       : 'text-slate-700 hover:text-slate-950 hover:bg-white/70'
                   }`}
                 >
-                  Sheet {sNum}
+                  {(sNum - 1) * PAGE_SIZE + 1}–{Math.min(sNum * PAGE_SIZE, filteredCalls.length)}
                 </button>
               ))}
             </div>
@@ -1505,100 +1501,6 @@ export function HandledCallsPage({
           </table>
         </div>
 
-        {/* Excel Workbook Sheet Tabs Navigation Bar */}
-        <div className="flex flex-wrap items-center justify-between border-t-2 border-slate-300 bg-slate-200/95 px-3 pt-1.5 pb-2 select-none gap-2">
-          <div className="flex items-center gap-1">
-            {/* Sheet Jump Controls: First, Prev, Next, Last */}
-            <div className="flex items-center border border-slate-300 rounded bg-white mr-2 shadow-2xs">
-              <button
-                type="button"
-                disabled={safeSheet === 1}
-                onClick={() => setActiveSheet(1)}
-                title="First Sheet (Sheet 1)"
-                className="p-1.5 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 border-r border-slate-200 cursor-pointer"
-              >
-                <ChevronsLeftIcon className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                disabled={safeSheet === 1}
-                onClick={() => setActiveSheet((p) => Math.max(1, p - 1))}
-                title="Previous Sheet"
-                className="p-1.5 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 cursor-pointer"
-              >
-                <ChevronLeftIcon className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                disabled={safeSheet === totalSheets}
-                onClick={() => setActiveSheet((p) => Math.min(totalSheets, p + 1))}
-                title="Next Sheet"
-                className="p-1.5 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 border-l border-slate-200 cursor-pointer"
-              >
-                <ChevronRightIcon className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                disabled={safeSheet === totalSheets}
-                onClick={() => setActiveSheet(totalSheets)}
-                title={`Last Sheet (Sheet ${totalSheets})`}
-                className="p-1.5 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 border-l border-slate-200 cursor-pointer"
-              >
-                <ChevronsRightIcon className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {/* Workbook Sheet Tabs: Sheet 1, Sheet 2, Sheet 3 ... */}
-            <div className="flex items-end gap-1">
-              {Array.from({ length: totalSheets }, (_, i) => i + 1).map((sNum) => {
-                const isActive = safeSheet === sNum
-                const sheetStart = (sNum - 1) * PAGE_SIZE + 1
-                const sheetEnd = Math.min(sNum * PAGE_SIZE, filteredCalls.length)
-                return (
-                  <button
-                    key={sNum}
-                    type="button"
-                    onClick={() => setActiveSheet(sNum)}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs rounded-t-md transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-white text-emerald-800 font-bold border-t-2 border-emerald-600 shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-t border-r border-l border-slate-300 font-medium'
-                    }`}
-                  >
-                    <span className={`inline-block w-2 h-2 rounded-full ${isActive ? 'bg-emerald-600' : 'bg-slate-400'}`} />
-                    <span>Sheet {sNum}</span>
-                    <span className="text-[10px] text-slate-500 font-normal">
-                      ({sheetStart}–{sheetEnd})
-                    </span>
-                  </button>
-                )
-              })}
-
-              {/* Excel '+' New Sheet Visual Indicator */}
-              <div
-                title="Excel Workbook · 10 records per sheet"
-                className="flex items-center justify-center w-7 h-7 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-300/60 cursor-default text-sm font-semibold ml-1"
-              >
-                +
-              </div>
-            </div>
-          </div>
-
-          {/* Status Bar */}
-          <div className="flex items-center gap-3 text-[11px] text-slate-600 font-mono">
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
-              Ready · 10 rows / sheet
-            </span>
-            <span>
-              Rows {filteredCalls.length === 0 ? 0 : startIndex + 1}–{endIndex} of {filteredCalls.length}
-            </span>
-            <span className="hidden sm:inline text-slate-400">|</span>
-            <span className="hidden sm:inline font-semibold text-slate-700">
-              Sheet {safeSheet} of {totalSheets}
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* SLIDE-OVER OVERLAY DRAWER: RECORDING PLAYER + TRANSCRIPT */}
