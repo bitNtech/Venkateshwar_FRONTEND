@@ -1,0 +1,481 @@
+@import "tailwindcss";
+
+@theme {
+  /* ---- Venkateshwar Hospital Medical Color Palette ---- */
+  --color-primary: #1677b8;
+  --color-primary-dark: #075a91;
+  --color-primary-light: #ddf2fb;
+  --color-cyan: #42b9d5;
+  --color-accent: #f4c542;
+  --color-accent-hover: #e5b632;
+  --color-canvas: #f7fbfd;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-hover: #edf6fb;
+  --color-surface-warm: #f0f7fb;
+  --color-body: #17324d;
+  --color-muted: #64798a;
+  --color-faint: #8fa0ad;
+  --color-hairline: #dceaf2;
+  --color-track: #c5dbe8;
+
+  /* ---- Semantic accents aligned with clinical workflows ---- */
+  --color-pulse: #1677b8; /* primary action / AI voice active */
+  --color-nav: #075a91;   /* deep clinical royal blue */
+  --color-sage: #1e9e67;  /* verified / healthy / confirmed */
+  --color-signal: #42b9d5;/* secondary accent / telecommunication */
+  --color-amber: #f4c542; /* warm golden alert / key action */
+  --color-critical: #d9383a; /* emergency / critical clinical triage */
+  --color-info: #1677b8;  /* medical information */
+  --color-insight: #2563eb;/* clinical AI intelligence */
+
+  --color-ink-teal: #082138;
+  --color-mist: #f7fbfd;
+
+  /* ---- Typography: Inter for UI & chrome / Plus Jakarta Sans for body & headings ---- */
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-content: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* ---- Type scale ---- */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.45;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.625rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 2.125rem;
+  --text-2xl--line-height: 1.15;
+  --text-3xl: 3rem;
+  --text-3xl--line-height: 1.05;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 3px rgb(23 50 77 / 6%);
+  --shadow-md: 0 4px 14px -2px rgb(23 50 77 / 8%), 0 1px 3px rgb(23 50 77 / 4%);
+  --shadow-lg: 0 12px 32px -4px rgb(23 50 77 / 10%), 0 4px 12px -2px rgb(23 50 77 / 5%);
+  --shadow-xl: 0 20px 48px -8px rgb(23 50 77 / 14%);
+}
+
+:root {
+  --primary: #1677B8;
+  --primary-dark: #075A91;
+  --primary-light: #DDF2FB;
+  --cyan: #42B9D5;
+  --accent: #F4C542;
+  --accent-hover: #E5B632;
+  --background: #F7FBFD;
+  --surface: #FFFFFF;
+  --text-primary: #17324D;
+  --text-secondary: #64798A;
+  --border: #DCEAF2;
+}
+
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-content);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.aica-app-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(120deg, rgb(255 255 255 / 28%), transparent 42%),
+    transparent;
+}
+
+.aica-app-shell::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 68% 18%, rgb(121 168 141 / 10%), transparent 24rem),
+    radial-gradient(circle at 42% 90%, rgb(61 150 201 / 7%), transparent 20rem);
+  content: '';
+  pointer-events: none;
+}
+
+.aica-page-content {
+  scrollbar-gutter: stable;
+}
+
+.aica-page-content input,
+.aica-page-content select,
+.aica-page-content textarea {
+  border-color: rgb(149 177 158 / 55%);
+  background-color: rgb(255 255 255 / 32%);
+  backdrop-filter: blur(10px);
+}
+
+.aica-page-content input:hover,
+.aica-page-content select:hover,
+.aica-page-content textarea:hover {
+  border-color: rgb(121 168 141 / 75%);
+}
+
+.aica-page-content table tbody tr {
+  transition: background-color 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.aica-page-content table tbody tr:hover {
+  background-color: rgb(255 255 255 / 30%);
+  box-shadow: inset 3px 0 var(--color-pulse);
+}
+
+.aica-page-content table tbody tr:focus-within {
+  background-color: rgb(121 168 141 / 12%);
+  box-shadow: inset 3px 0 var(--color-pulse);
+}
+
+.aica-page-content ul > li > button {
+  transition: background-color 180ms ease-out, border-color 180ms ease-out, transform 180ms ease-out;
+}
+
+.aica-page-content ul > li > button:hover {
+  background-color: rgb(255 255 255 / 28%);
+  transform: translateX(3px);
+}
+
+.aica-page-content h2,
+.aica-page-content h3 {
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .aica-header-title {
+    animation: aica-header-title-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .aica-nav-bubble {
+    animation:
+      aica-nav-bubble-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both,
+      aica-nav-selection-glow 2200ms ease-out 300ms 1 both;
+  }
+  .aica-nav-bubble::after {
+    position: absolute;
+    inset: -1px;
+    border: 1px solid rgb(255 255 255 / 35%);
+    border-radius: inherit;
+    content: '';
+    pointer-events: none;
+  }
+  .aica-nav-section-label {
+    text-shadow: 0 1px rgb(0 0 0 / 12%);
+  }
+  .aica-nav-label {
+    line-height: 1.35;
+  }
+  .aica-nav-item:hover {
+    background: rgb(255 255 255 / 14%);
+    border-color: rgb(255 255 255 / 24%);
+    backdrop-filter: blur(8px);
+    transform: translateX(2px);
+  }
+  .aica-header > div:nth-of-type(1),
+  .aica-header > div:nth-of-type(2) {
+    animation: aica-header-chip-in 420ms cubic-bezier(0.22, 1, 0.36, 1) 70ms both;
+  }
+  .aica-status-chip .bg-sage {
+    animation: aica-status-breathe 2.4s ease-in-out infinite;
+  }
+  .aica-notification-panel {
+    animation: aica-panel-in 180ms ease-out both;
+    transform-origin: top right;
+  }
+  .aica-page-content > * {
+    animation: aica-page-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .aica-page-content > *:nth-child(2) {
+    animation-delay: 45ms;
+  }
+  .aica-page-content > *:nth-child(3) {
+    animation-delay: 90ms;
+  }
+  .aica-page-content > *:nth-child(4) {
+    animation-delay: 135ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aica-page-content table tbody tr,
+  .aica-page-content ul > li > button {
+    transition: none;
+  }
+}
+
+::selection {
+  background: var(--color-pulse);
+  color: var(--color-ink-teal);
+}
+
+/* Visible keyboard focus, always `pulse` per the accessibility spec. */
+:focus-visible {
+  outline: 2px solid var(--color-pulse);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-hairline);
+  border-radius: 999px;
+  border: 2px solid var(--color-canvas);
+  background-clip: padding-box;
+}
+
+/* Range input styling: ensures native sliders always display a visible simple line track */
+input[type="range"] {
+  accent-color: var(--color-pulse, #1677b8);
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background-color: #cbd5e1;
+  border-radius: 999px;
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background-color: #cbd5e1;
+  border-radius: 999px;
+}
+
+@layer components {
+  .aica-nav-rail {
+    background:
+      linear-gradient(175deg, #094772 0%, #075a91 40%, #053b61 100%),
+      var(--color-nav);
+    box-shadow: inset -1px 0 rgb(255 255 255 / 12%), inset 0 1px rgb(255 255 255 / 10%);
+  }
+
+  /* ---- Shared button system — Venkateshwar Hospital standard ---- */
+  .btn-primary {
+    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1677B8] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 ease-out hover:bg-[#075A91] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-accent {
+    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#F4C542] px-5 py-2.5 text-sm font-bold text-[#17324D] shadow-sm transition-all duration-150 ease-out hover:bg-[#E5B632] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#DCEAF2] bg-white px-5 py-2.5 text-sm font-semibold text-[#17324D] transition-colors duration-150 hover:border-[#1677B8]/40 hover:text-[#1677B8] hover:bg-[#DDF2FB]/40 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-[#64798A] transition-colors duration-150 hover:bg-[#EDF6FB] hover:text-[#17324D] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-critical/40 px-4 py-2 text-sm font-semibold text-critical transition-colors duration-150 hover:bg-critical/10 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  /* ---- Healthcare surface system ---- */
+  .card {
+    @apply rounded-2xl border border-[#DCEAF2] bg-white shadow-sm;
+  }
+  .card-interactive {
+    @apply rounded-2xl border border-[#DCEAF2] bg-white shadow-sm transition-all duration-200 ease-out hover:-translate-y-1 hover:border-[#1677B8]/45 hover:shadow-md;
+  }
+  .card-hospital {
+    @apply rounded-2xl border border-[#DCEAF2] bg-white p-6 shadow-sm transition-all duration-200;
+  }
+  .card-hospital-hover {
+    @apply rounded-2xl border border-[#DCEAF2] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#1677B8]/50 hover:shadow-md;
+  }
+
+  .input {
+    @apply rounded-xl border border-[#DCEAF2] bg-white px-4 py-2 text-sm text-[#17324D] placeholder:text-[#8FA0AD] transition-colors duration-150 focus:border-[#1677B8] focus:outline-none focus:ring-2 focus:ring-[#1677B8]/20;
+  }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364798A' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 0.875rem 0.875rem;
+    padding-right: 2.25rem !important;
+    cursor: pointer;
+  }
+  select:focus {
+    outline: none;
+    border-color: #1677b8;
+    box-shadow: 0 0 0 2px rgba(22, 119, 184, 0.2);
+  }
+  select option {
+    background-color: #ffffff;
+    color: #17324d;
+    padding: 8px 12px;
+  }
+
+  /* ---- Logo loading animation ---- */
+  .aica-splash-mark {
+    animation:
+      aica-wipe 1400ms cubic-bezier(0.22, 1, 0.36, 1) forwards,
+      aica-beat 380ms ease-out 1400ms 1 forwards,
+      aica-glow 2000ms ease-in-out 1400ms 1 forwards;
+  }
+  .aica-page-loading .aica-splash-mark {
+    animation-duration: 650ms, 260ms, 900ms;
+    animation-delay: 0ms, 650ms, 650ms;
+  }
+
+  /* ---- Voice Waveform Bars ---- */
+  .waveform-bar {
+    animation: wave-bar-pulse 1.2s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes wave-bar-pulse {
+  0% {
+    height: 6px;
+    opacity: 0.5;
+  }
+  100% {
+    height: 32px;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .aica-page-content {
+    padding: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled),
+  a {
+    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-duration: 180ms;
+    transition-timing-function: ease-out;
+  }
+  button:not(:disabled):active {
+    transform: scale(0.98);
+  }
+}
+
+@keyframes aica-wipe {
+  from {
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes aica-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+@keyframes aica-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(118, 147, 130, 0));
+  }
+  50% {
+    filter: drop-shadow(0 0 26px rgba(118, 147, 130, 0.65));
+  }
+}
+@keyframes aica-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes aica-header-title-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes aica-nav-bubble-in {
+  from {
+    opacity: 0.65;
+    transform: translateX(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes aica-nav-selection-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 40%);
+  }
+  45% {
+    box-shadow: 0 0 0 5px rgb(255 255 255 / 12%);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(255 255 255 / 0%);
+  }
+}
+@keyframes aica-header-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes aica-status-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(22 163 74 / 0%);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgb(22 163 74 / 12%);
+  }
+}
+@keyframes aica-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Data-flow animation for premium flow edges — slow, professional */
+@keyframes aica-flow-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -19;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .aica-flow-dash {
+    animation: aica-flow-dash 2.4s linear infinite;
+  }
+}
